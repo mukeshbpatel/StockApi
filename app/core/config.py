@@ -88,23 +88,28 @@ INTERVAL_TO_MINUTES: dict = {
 # Mapping of Interval -> max chunk size (in days) per Groww API request.
 # Fine-grained chunking prevents Groww's ~3,000 candle response truncation limit.
 INTERVAL_CHUNK_DAYS: dict = {
-    Interval.ONE_MIN: 4,          # 4 days (~1,500 candles, keeps response well below ~3,000 limit)
-    Interval.ONE_MIN_LONG: 4,
-    Interval.FIVE_MIN: 15,        # 15 days (~1,125 candles)
-    Interval.FIVE_MIN_SHORT: 15,
-    Interval.TEN_MIN: 30,         # 30 days (~1,125 candles)
+    # 1min to 30min : get data for one month at a time
+    Interval.ONE_MIN: 30,
+    Interval.ONE_MIN_LONG: 30,
+    Interval.FIVE_MIN: 30,
+    Interval.FIVE_MIN_SHORT: 30,
+    Interval.TEN_MIN: 30,
     Interval.TEN_MIN_SHORT: 30,
-    Interval.FIFTEEN_MIN: 45,     # 45 days (~1,125 candles)
-    Interval.FIFTEEN_MIN_SHORT: 45,
-    Interval.THIRTY_MIN: 60,      # 60 days (~750 candles / 2 months)
-    Interval.THIRTY_MIN_SHORT: 60,
-    Interval.SIXTY_MIN: 60,       # 60 days (~375 candles / 2 months)
+    Interval.FIFTEEN_MIN: 30,
+    Interval.FIFTEEN_MIN_SHORT: 30,
+    Interval.THIRTY_MIN: 30,
+    Interval.THIRTY_MIN_SHORT: 30,
+    
+    # 60min and 75min : get data for two months at a time
+    Interval.SIXTY_MIN: 60,
     Interval.SIXTY_MIN_SHORT: 60,
-    Interval.SEVENTY_FIVE_MIN: 60,# 60 days (~300 candles / 2 months)
+    Interval.SEVENTY_FIVE_MIN: 60,
     Interval.SEVENTY_FIVE_MIN_SHORT: 60,
-    Interval.ONE_DAY: 365,        # 365 days (~250 candles / 1 year)
+    
+    # Daily and weekly
+    Interval.ONE_DAY: 365,
     Interval.ONE_DAY_LONG: 365,
-    Interval.ONE_WEEK: 730,       # 730 days (~104 candles / 2 years)
+    Interval.ONE_WEEK: 730,
     Interval.ONE_WEEK_LONG: 730,
 }
 

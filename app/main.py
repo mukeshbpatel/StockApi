@@ -4,8 +4,11 @@ FastAPI application entrypoint.
 Wires up CORS, the versioned API router, Swagger/ReDoc docs, and a
 top-level /health endpoint for platform liveness checks (e.g. Render).
 """
+import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
 from app.api.v1.router import router as v1_router
 from app.core.config import settings

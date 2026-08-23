@@ -100,13 +100,16 @@ def _extract_candles(payload: dict) -> List[list]:
     return candles or []
 
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 async def _fetch_chunk(
     client: httpx.AsyncClient,
     symbol: str,
     interval: Interval,
     start_ms: int,
     end_ms: int,
-    semaphore: asyncio.Semaphore,
 ) -> List[list]:
     url = f"{settings.GROWW_BASE_URL}/{symbol.upper()}"
     params = {
@@ -115,17 +118,23 @@ async def _fetch_chunk(
         "endTimeInMillis": end_ms,
     }
 
-    async with semaphore:
-        try:
-            response = await client.get(url, params=params, headers=HEADERS)
-        except httpx.RequestError as exc:
-            raise GrowwClientError(
-                f"Network error while contacting Groww for {symbol}: {exc}"
-            ) from exc
+    start_str = datetime.fromtimestamp(start_ms / 1000, tz=IST).strftime('%Y-%m-%d %H:%M:%S')
+    end_str = datetime.fromtimestamp(end_ms / 1000, tz=IST).strftime('%Y-%m-%d %H:%M:%S')
+    logger.info(f"Fetching chunk for {symbol} | Interval: {interval.value} ({params['intervalInMinutes']}m) | Range: {start_str} to {end_str} | URL: {url} | Params: {params}")
+
+    try:
+        response = await client.get(url, params=params, headers=HEADERS)
+    except httpx.RequestError as exc:
+        logger.error(f"Network error while contacting Groww for {symbol}: {exc}")
+        raise GrowwClientError(
+            f"Network error while contacting Groww for {symbol}: {exc}"
+        ) from exc
 
     if response.status_code == 404:
+        logger.info(f"Groww returned 404 for chunk {start_str} to {end_str}")
         return []
     if response.status_code >= 400:
+        logger.error(f"Groww API error {response.status_code} for chunk {start_str} to {end_str}: {response.text[:200]}")
         raise GrowwClientError(
             f"Groww API returned HTTP {response.status_code} for {symbol}: "
             f"{response.text[:200]}"
@@ -138,7 +147,9 @@ async def _fetch_chunk(
             f"Groww API returned non-JSON response for {symbol}"
         ) from exc
 
-    return _extract_candles(payload)
+    candles = _extract_candles(payload)
+    logger.info(f"Chunk fetch successful. Retrieved {len(candles)} candles.")
+    return candles
 
 
 async def fetch_candles(
@@ -146,20 +157,18 @@ async def fetch_candles(
 ) -> List[list]:
     """
     Fetch all candles for the requested symbol/interval/date-range, chunking
-    and parallelizing requests as needed, then merge + dedupe + sort.
+    and making sequential requests, then merge + dedupe + sort.
 
     Returns a list of raw candle rows: [timestamp, open, high, low, close, volume]
     sorted ascending by timestamp, with duplicate timestamps removed.
     """
     chunks = build_time_chunks(start_date, end_date, interval)
-    semaphore = asyncio.Semaphore(settings.MAX_CONCURRENT_REQUESTS)
-
+    
+    results = []
     async with httpx.AsyncClient(timeout=settings.GROWW_TIMEOUT_SECONDS) as client:
-        tasks = [
-            _fetch_chunk(client, symbol, interval, start_ms, end_ms, semaphore)
-            for start_ms, end_ms in chunks
-        ]
-        results = await asyncio.gather(*tasks)
+        for start_ms, end_ms in chunks:
+            chunk_data = await _fetch_chunk(client, symbol, interval, start_ms, end_ms)
+            results.append(chunk_data)
 
     merged: dict = {}
     for chunk_candles in results:
