@@ -11,11 +11,11 @@ class Candle(BaseModel):
 
     date: str = Field(..., description="Candle date in yyyy-MM-dd (IST)")
     time: str = Field(..., description="Candle time in HH:mm (IST)")
-    open: float
-    high: float
-    low: float
-    close: float
-    volume: float
+    open: Optional[float] = None
+    high: Optional[float] = None
+    low: Optional[float] = None
+    close: Optional[float] = None
+    volume: Optional[float] = None
 
     rsi_14: Optional[float] = None
     ema_20: Optional[float] = None

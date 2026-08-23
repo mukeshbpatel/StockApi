@@ -16,6 +16,7 @@ from zoneinfo import ZoneInfo
 import httpx
 
 from app.core.config import (
+    INTERVAL_CHUNK_DAYS,
     INTERVAL_TO_MINUTES,
     INTRADAY_INTERVALS,
     Interval,
@@ -54,7 +55,8 @@ def build_time_chunks(
 ) -> List[Tuple[int, int]]:
     """
     Split the [start_date, end_date] range into (start_ms, end_ms) chunk tuples,
-    bounded by the configured max chunk size for the interval class.
+    bounded by the interval-specific max chunk size (in days) to prevent Groww's
+    response size limits and candle truncation.
     """
     start_dt = _parse_yyyymmdd_to_ist_midnight(start_date)
     # end_date is inclusive; push to end-of-day so the last day's candles are captured
@@ -62,10 +64,11 @@ def build_time_chunks(
         hours=23, minutes=59, seconds=59
     )
 
-    max_days = (
+    max_days = INTERVAL_CHUNK_DAYS.get(
+        interval,
         settings.INTRADAY_CHUNK_DAYS
         if interval in INTRADAY_INTERVALS
-        else settings.DAILY_CHUNK_DAYS
+        else settings.DAILY_CHUNK_DAYS,
     )
 
     chunks: List[Tuple[int, int]] = []

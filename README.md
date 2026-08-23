@@ -56,8 +56,13 @@ app/
 
 - `technical_indicators=false` returns `null` for all indicator fields
   while still returning OHLCV data.
-- Long date ranges are automatically chunked (30 days per request for
-  intraday intervals, 365 days for daily/weekly) and fetched concurrently,
-  then merged, de-duplicated by timestamp, and sorted chronologically.
+- Long date ranges are automatically chunked based on interval (e.g. 4 days for 1m,
+  15 days for 5m, 60 days / 2 months for 30m/60m/75m, 365 days for 1d) and fetched
+  concurrently, preventing upstream response truncation, then merged, de-duplicated
+  by timestamp, and sorted chronologically.
 - All timestamps are converted to `Asia/Kolkata` (IST) before being
   formatted into `date` (`yyyy-MM-dd`) and `time` (`HH:mm`) fields.
+- Note: Groww's public charting service maintains a rolling ~90-day retention window
+  for intraday candle data (`1m` through `75min`), while daily (`1d`) and weekly (`1w`)
+  intervals provide multi-year historical data.
+
